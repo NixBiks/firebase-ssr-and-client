@@ -1,34 +1,36 @@
 "use client";
 
-import { signIn, signOut, onAuthStateChanged } from "@/lib/firebase/client";
+import { signIn, signOut } from "@/lib/firebase/client";
+import { useRouter } from "next/navigation";
 import React, { useState } from "react";
 const Page = () => {
+  const router = useRouter();
+
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
+
   const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setError(null);
     if (!username || !password) {
       return;
     }
-    signIn(username, password).catch((error) => {
-      setError(error.message);
-    });
+    signIn(username, password)
+      .then(() => {
+        router.push("/app");
+      })
+      .catch((error) => {
+        setError(error.message);
+      });
   };
+
   const handleSignOut = () => {
     setError(null);
-    // setUsername("");
-    // setPassword("");
     signOut().catch((error) => {
       setError(error.message);
     });
   };
-  React.useEffect(() => {
-    return onAuthStateChanged((user) => {
-      console.log("user", user);
-    });
-  }, []);
 
   return (
     <div className="login-page">

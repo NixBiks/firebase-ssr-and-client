@@ -5,15 +5,14 @@ import {
   getAuth,
   initializeAuth,
   signInWithEmailAndPassword,
-  inMemoryPersistence,
-  browserLocalPersistence,
-  browserSessionPersistence,
   indexedDBLocalPersistence,
 } from "firebase/auth";
 import {
   initializeFirestore,
   Firestore,
   getFirestore,
+  onSnapshot,
+  doc,
 } from "firebase/firestore";
 
 const { sessionCookieName, ...firebaseConfig } = config.firebase;
@@ -30,7 +29,7 @@ try {
     )}`
   );
   auth = initializeAuth(app, {
-    persistence: browserLocalPersistence,
+    persistence: indexedDBLocalPersistence,
   });
   firestore = initializeFirestore(app, {});
 } catch {
@@ -40,7 +39,10 @@ try {
 }
 
 const signIn = async (username: string, password: string) => {
+  // sign in client side
   const user = await signInWithEmailAndPassword(auth, username, password);
+
+  // sign in server side
   if (user.user) {
     const response = await fetch("/auth/sign-in", {
       method: "POST",
@@ -58,8 +60,7 @@ const signIn = async (username: string, password: string) => {
     throw new Error("User not found");
   }
 };
-const signOut = async () => {
-  await auth.signOut();
+const signOutServerSide = async () => {
   const response = await fetch("/auth/sign-out", {
     method: "POST",
   });
@@ -69,13 +70,26 @@ const signOut = async () => {
     throw new Error("Failed to sign out server side");
   }
 };
+const signOutClientSide = auth.signOut.bind(auth);
+const signOut = async () => {
+  // sign out client side
+  await signOutClientSide();
+
+  // sign out server side
+  return await signOutServerSide();
+};
+const onSnapshotCompanySnapshot = (companyId: string, callback: any) => {
+  const docRef = doc(firestore, `companies/${companyId}`);
+  return onSnapshot(docRef, callback);
+};
 const onAuthStateChanged = auth.onAuthStateChanged.bind(auth);
-const onIdTokenChanged = auth.onIdTokenChanged.bind(auth);
 export {
   auth,
   firestore,
   signIn,
   signOut,
+  signOutClientSide,
+  signOutServerSide,
+  onSnapshotCompanySnapshot,
   onAuthStateChanged,
-  onIdTokenChanged,
 };
