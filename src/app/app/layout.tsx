@@ -1,8 +1,7 @@
 import type { Metadata } from "next";
-import { config } from "@/lib/config";
-import { auth } from "@/lib/firebase/server";
+import AuthSync from "@/components/AuthSync";
+import { getDecodedIdToken } from "@/lib/firebase/server";
 import { cookies } from "next/headers";
-import { AuthSync } from "@/components/AuthSync";
 import { redirect } from "next/navigation";
 
 export const metadata: Metadata = {
@@ -15,12 +14,10 @@ export default async function Layout({
 }: {
   children: React.ReactNode;
 }) {
-  const cookieStore = cookies();
-  const authCookie = cookieStore.get(config.firebase.sessionCookieName)?.value;
-  if (!authCookie) {
+  const decodedClaims = await getDecodedIdToken(cookies());
+  if (!decodedClaims) {
     redirect("/login");
   }
-  const decodedClaims = await auth.verifySessionCookie(authCookie);
 
-  return <AuthSync serverUid={decodedClaims.uid}>{children}</AuthSync>;
+  return <AuthSync>{children}</AuthSync>;
 }

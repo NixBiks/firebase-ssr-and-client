@@ -9,18 +9,23 @@ import {
 } from "firebase/auth";
 import {
   initializeFirestore,
-  Firestore,
+  Firestore as FirestoreType,
   getFirestore,
   onSnapshot,
   doc,
+  getDoc,
 } from "firebase/firestore";
+import { cookies } from "next/headers";
+import { Company, company } from "./schemas";
+import { parse } from "valibot";
 
 const { sessionCookieName, ...firebaseConfig } = config.firebase;
+type CookieStore = ReturnType<typeof cookies>;
 
 const appName = "ssr";
 let app: FirebaseApp;
 let auth: Auth;
-let firestore: Firestore;
+let firestore: FirestoreType;
 try {
   app = initializeApp(firebaseConfig, appName);
   console.log(
@@ -83,13 +88,28 @@ const onSnapshotCompanySnapshot = (companyId: string, callback: any) => {
   return onSnapshot(docRef, callback);
 };
 const onAuthStateChanged = auth.onAuthStateChanged.bind(auth);
+
+const Firestore = () => {
+  return {
+    onCompanyChange(id: string, callback: (company: Company) => void) {
+      return onSnapshot(doc(firestore, `companies/${id}`), {
+        next: (companySnapshot) => {
+          if (!companySnapshot.exists) {
+            throw new Error(`${id} is not a valid company`);
+          }
+          callback(parse(company, companySnapshot.data()));
+        },
+      });
+    },
+  };
+};
+
 export {
   auth,
   firestore,
   signIn,
   signOut,
-  signOutClientSide,
-  signOutServerSide,
   onSnapshotCompanySnapshot,
   onAuthStateChanged,
+  Firestore,
 };
